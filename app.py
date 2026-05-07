@@ -9,6 +9,7 @@ from models.sensor import Sensor
 from models.usuario import Usuario
 from models.lista_compra import Lista_compra
 from models.login import Login
+from models.animal import Animal
 
 # Instancia a aplicação Flask
 app = Flask(__name__)
@@ -71,6 +72,15 @@ def get_usuario_form():
         "usuario_cargo": request.form.get("cargo", "").strip()
     }
 
+def get_animal_form():
+    return{
+        "animal_especie": request.form.get("especie", "").strip(),
+        "animal_sexo": request.form.get("sexo", "").strip(),
+        "animal_idade": request.form.get("faixa_etaria", "").strip(),  
+        "animal_raca": request.form.get("raca", "").strip(),
+        "animal_identificacao": request.form.get("identificacao_animal", "").strip(),
+    }
+
 # ====== Pegando os dados para o login ====== #
 # Extrai e sanitiza os campos do formulário de login
 def get_login_form():
@@ -119,6 +129,11 @@ def index():
     return render_template("landingpage.html")
 
 
+@app.route("/inicial")
+def inicial():
+    return render_template("base.html")
+
+
 # ====== Endpoints para o cadastro de produtos ====== #
 
 # ===== Buscando produtos ====== #
@@ -131,7 +146,7 @@ def produtos():
 # Exibe o formulário de cadastro de novo produto
 @app.route("/produto/novo")
 def novo_produto():
-    return render_template("formulario_produto.html", produto=None)
+    return render_template("Cadastro_produto.html", produto=None)
 
 # ====== Cadastrando novos produtos ====== #
 # Recebe os dados do formulário, valida e persiste um novo produto no banco
@@ -220,7 +235,7 @@ def movimentacoes():
 # Exibe o formulário de cadastro de novo usuário
 @app.route("/usuario/novo", methods=['GET', 'POST'])
 def novo_usuario():
-    return render_template("cadastro.html", usuario=None)
+    return render_template("cadastro_usuario.html", usuario=None)
 
 # ====== Adicionado novo usuario ====== #
 # Recebe os dados do formulário, valida e persiste um novo usuário no banco
@@ -235,7 +250,7 @@ def salvar_usuario():
         if erros:
             for erro in erros:
                 flash(erro, "danger")
-            return render_template("cadastro.html", usuario=dados)
+            return render_template("cadastro_usuario.html", usuario=dados)
 
         usuario.gravar_usuario()
         flash("Usuario cadastrado com sucesso.", "success")
@@ -243,7 +258,7 @@ def salvar_usuario():
         
     except Exception as e:
         flash(f"Erro ao cadastrar usuario {e}", "danger")
-        return render_template("cadastro.html", usuario=dados)
+        return render_template("cadastro_usuario.html", usuario=dados)
 
 
 
@@ -315,7 +330,7 @@ def sensores():
 # Exibe o formulário de cadastro de novo sensor
 @app.route("/sensor/novo")
 def novo_sensor():
-    return render_template("formulario_sensor.html", sensor=None)
+    return render_template("Cadastro_sensor.html", sensor=None)
 
 # ====== Adicionado novos sensores ====== #
 # Recebe os dados do formulário e persiste um novo sensor no banco
@@ -494,6 +509,102 @@ def salvar_login():
     except Exception as e:
         flash(f"Erro ao fazer login", "danger")
         return render_template("login.html", login=dados)
+
+#endpoint animal
+
+@app.route("/animal/novo", methods=['GET', 'POST'])
+def novo_animal():
+    return render_template("Cadastro_animais.html", usuario=None)
+
+
+@app.route("/animal/salvar", methods=["POST"])
+def salvar_animal():
+    try:
+        dados = get_animal_form()
+        animal = Animal(**dados)
+        erros = animal.validar()
+
+        # Retorna ao formulário exibindo os erros caso a validação falhe
+        if erros:
+            for erro in erros:
+                flash(erro, "danger")
+            return render_template("Cadastro_animais.html", usuario=dados)
+
+        animal.gravar_animal()
+        flash("Animal cadastrado com sucesso.", "success")
+        return redirect(url_for("novo_animal"))
+        
+    except Exception as e:
+        flash(f"Erro ao cadastrar animal {e}", "danger")
+        return render_template("Cadastro_animais.html", usuario=dados)
+
+
+
+@app.route("/animal/buscar/<int:id>", methods=["GET"])
+def buscar_animal(id):
+    animal = Animal.buscar_animal_por_id(id)
+    if not animal:
+        flash("Animal não encontrado.", "erro")
+        return redirect(url_for("animal"))
+    #return render_template("formulario_usuario.html", usuario=usuario)
+    return "Animal encontrado"
+
+# ====== Atualizando dados de usuario ====== #
+# Recebe os dados atualizados, valida e atualiza o usuário identificado pelo id
+@app.route("/animal/atualizar/<int:id>", methods=["PUT"])
+def atualizar_animal(id):
+    dados = get_animal_form()
+    animal = Animal(**dados)
+    erros = animal.validar()
+
+    if erros:
+        for erro in erros:
+            flash(erro, "erro")
+        dados["id"] = id
+        #return render_template("formulario_usuario.html", usuario=dados)
+        return f"Erro: {erro}"
+
+    try:
+        # Verifica se o usuário existe antes de tentar atualizar
+        if not Animal.buscar_animal_por_id(id):
+            flash("Animal não encontrado.", "erro")
+            return redirect(url_for("novo_animal"))
+
+        animal.atualizar_animal(id)
+        flash("Animal atualizado com sucesso.", "sucesso")
+        return redirect(url_for("novo_animal")), 200
+    except Exception as e:
+        dados["id"] = id
+        flash(f"Erro ao atualizar o animal: {e}", "erro")
+        #return render_template("formulario_usuario.html", usuario=dados)
+        return f"Erro: {e}"
+
+# ====== Excluindo usuarios ====== #
+# Remove o usuário identificado pelo id
+@app.route("/animal/excluir/<int:id>", methods=["DELETE"])
+def excluir_animal(id):
+    try:
+        Animal.deletar_animal(id)
+        flash("Animal excluído com sucesso.", "sucesso")
+        return "Animal deletado"
+    except ValueError as e:
+        flash(str(e), "erro")
+    except Exception as e:
+        flash(f"Erro ao excluir o animal: {e}", "erro")
+        return f"Erro ao excluir o animal: {e}"
+    return redirect(url_for("novo_animal"))
+
+
+
+
+
+
+
+#endpoint fornecedor
+@app.route("/fornecedor")
+def fornecedor():
+    #produtos_baixo = Produto.low_stock()
+    return render_template("Cadastro_fornecedor.html")
 
 
 # ====== Executar codigo ======#

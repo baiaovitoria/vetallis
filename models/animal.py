@@ -7,12 +7,11 @@ class Animal(Crud_base):
 
     # Define a tabela e os campos do banco
     tabela = "animal"
-    fields = ["animal_especie", "animal_quantidade", "animal_sexo", "animal_raca", "animal_identificacao", "animal_idade"]
+    fields = ["animal_especie","animal_sexo", "animal_raca", "animal_identificacao", "animal_idade"]
 
     # Define os atributos 
-    def __init__(self, animal_especie, animal_quantidade, animal_sexo, animal_raca, animal_identificacao, animal_idade):
+    def __init__(self, animal_especie, animal_sexo, animal_raca, animal_identificacao, animal_idade):
         self.animal_especie = animal_especie
-        self.animal_quantidade = animal_quantidade
         self.animal_sexo = animal_sexo
         self.animal_raca = animal_raca
         self.animal_identificacao = animal_identificacao
@@ -22,16 +21,10 @@ class Animal(Crud_base):
     def validar(self):
         erros = [
             Manipular.validar_vazio(self.animal_especie, "especie"), # verifica se os dados estão vazio
-            Manipular.validar_vazio(self.animal_quantidade, "quantidade"), # verifica se os dados estão vazio
             Manipular.validar_vazio(self.animal_sexo, "sexo"), # verifica se os dados estão vazio
             Manipular.validar_vazio(self.animal_raca, "raca"), # verifica se os dados estão vazio
             Manipular.validar_vazio(self.animal_identificacao, "identificacao"), # verifica se os dados estão vazio
             Manipular.validar_vazio(self.animal_idade, "idade"), # verifica se os dados estão vazio
-            Manipular.validar_caracter(self.animal_especie, "especie"), # verifica se o dados tem caracteres especiais
-            Manipular.validar_caracter(self.animal_quantidade, "quantidade"), # verifica se o dados tem caracteres especiais
-            Manipular.validar_caracter(self.animal_sexo, "sexo"), # verifica se o dados tem caracteres especiais
-            Manipular.validar_caracter(self.animal_raca, "raca"), # verifica se o dados tem caracteres especiais
-            Manipular.validar_caracter(self.animal_identificacao, "identificacao"), # verifica se o dados tem caracteres especiais
         ]
 
         return [ erro for erro in erros if erro] # Retorna  os erros 
