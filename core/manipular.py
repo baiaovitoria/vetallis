@@ -1,42 +1,40 @@
-# ==== Importação da bibliotecas necessaria para validação ===== #
 import requests
 import urllib
 
-# ======= Criação da classe de manipulação =====#
 class Manipular:
-    # ====== Preparação de dados para gravação no banco
     def preparar_banco(dados):
         pass
 
-    # ===== Validação de caracteres especiais ===== #
+    def comparar_criacao_senha(campo1, campo2):
+        if campo1 != campo2:
+            return f"As senhas não condizem uma com a outra."
+        return None
+
     def validar_caracter(dados, field_name):
-        especial= ["!", "@", "#", "$","%", "&", "*",] # Define os caracteres especiais
+        special= ["!", "@", "#", "$","%", "&", "*", "-", "+", "=", "¨", "/", ";" "?", "°", "()", "§", "£", "¢", "¬", "^" "`", "|", "_"]
         try:
-            for caractere in dados: # Percore os dados e verifica se há caracteres especiais
-                if caractere in especial:
+            for caractere in dados:
+                if caractere in special:
                     return None
-        except(TypeError, ValueError): # Retorna se houver erro
+        except(TypeError, ValueError):
             return f"O campo {field_name} está faltando um caracter especial"
         return f"O campo {field_name} não contem caracteres especiais"
     
-    # ===== Validação de campos vazios =====#
     def validar_vazio(dados, field_name):
-        if dados is None or str(dados).strip() == "": # Verifica se esta vazio
+        if dados is None or str(dados).strip() == "":
             return f"O campo {field_name} é obrigatório."
         return None
     
-    # ===== Validação de numero negartivos ===== #
     def validar_numero_negativo(dados, field_name):
         try:
-            if float(dados) < 0: # Verifica se o numero é menor do que zero
+            if float(dados) < 0:
                 return f"O campo {field_name} não pode ser negativo."
         except (TypeError, ValueError):
             return f"O campo {field_name} deve ser numérico."
         return None
     
-    # ======= Validação de CPF, usando a API do Invertexto ====== #
     def validar_cpf(dados, field_name, token):
-        url = "https://api.invertexto.com/v1/validator" 
+        url = "https://api.invertexto.com/v1/validator"
 
         params={
             "token":token,
@@ -61,8 +59,6 @@ class Manipular:
 
         return False
     
-
-    # ======= Validação de email, com a API do Invertexto ====== #
     def validar_email(dados, field_name, token):
         base_url= "https://api.invertexto.com/v1/email-validator"
         email_encoded = urllib.parse.quote (dados)
@@ -89,44 +85,40 @@ class Manipular:
 
             return False
         
-    # ======= Validação de datas ======= 
     def validar_data(dados, field_name):
         meses = ['01', '02', '03', '04', '05', '06',
-            '07', '08', '09', '10', '11', '12',] # Define os meses do ano
-        if field_name == "data": # Faz a verificação da data
-            print("data", dados["data"])
-            if len(dados) == 10:
-                for data in dados:
-                    if not(data.isdigit() or data == "/"):
-                        return f"O campo {field_name} está escrito de forma incorreta"
-                        break
-                    else:
-                        data_correta = True
-                if data_correta == True:
-                    if int(dados[6:]) >= 2025:
-                        if dados[3:5] in meses:
-                            if dados[3:5] in ['01', '03', '05', '07', '08', '10', '12']:
-                                if 0 < int(dados[0:2]) <= 31:
-                                    return True
-                                else:
-                                    return f"O campo {field_name} está incorreto"
-                            elif dados[3:5] in ['04', '06', '09', '11']:
-                                if 0 < int(dados[0:2]) <= 30:
-                                    return True
-                                else:
-                                    return False
-                            else:
-                                if int(dados[0:2]) == 28:
-                                    return True
-                                else:
-                                    return False
-                        else:
-                            return f"A {field_name} está com o mês incorreto"
-                    else:
-                        return f"A {field_name} está com o ano incorreto"
+            '07', '08', '09', '10', '11', '12',]
+        if len(dados) == 10:
+            for data in dados:
+                if not(data.isdigit() or data == "/"):
+                    return f"O campo {field_name} está escrito de forma incorreta"
+                    break
                 else:
-                    return f"A {field_name} está com a data incorreta"
+                    data_correta = True
+            if data_correta == True:
+                if int(dados[6:]) >= 2025:
+                    if dados[3:5] in meses:
+                        if dados[3:5] in ['01', '03', '05', '07', '08', '10', '12']:
+                            if 0 < int(dados[0:2]) <= 31:
+                                return None
+                            else:
+                                return f"O campo {field_name} está incorreto"
+                        elif dados[3:5] in ['04', '06', '09', '11']:
+                            if 0 < int(dados[0:2]) <= 30:
+                                return None
+                            else:
+                                return False
+                        else:
+                            if int(dados[0:2]) == 28:
+                                return None
+                            else:
+                                return False
+                    else:
+                        return f"A {field_name} está com o mês incorreto"
+                else:
+                    return f"A {field_name} está com o ano incorreto"
             else:
-                return f"O {field_name} não está de acordo com essa validação"
+                return f"A {field_name} está com a data incorreta"
         else:
-            return ("erro no nome")
+            return f"O {field_name} não está de acordo com essa validação"
+        return False

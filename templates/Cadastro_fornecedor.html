@@ -1,23 +1,24 @@
-{%extends 'base.html'%}
-{%block conteudo%}
+{% extends 'base.html'%}
+{% block conteudo%}
+
 
 <div class="d-flex justify-content-start">
     <a href="" class="bi bi-arrow-bar-left text-white" style="text-decoration: none;">Voltar</a>
 </div>
-<h3 class="mb-4 mt-3 text-start" style="color: white; padding:5px; border-bottom:solid 1px #fff;">Cadastro de
-    Fornecedor</h3>
-<form method="POST" action="" class="form-sensor">
+<h3 class="mb-4 mt-3 text-start" style="color: white; padding:5px; border-bottom:solid 1px #fff;">Cadastro de Fornecedor</h3>
+
+<form method="POST" action="{{ url_for('gravar_fornecedor') }}" class="form-sensor">
     <div class=" mt-4">
         <div class="divisao-form me-4 " style="max-width: 1200px; width: 100%;">
             <div class="mb-5 text-start">
                 <div class="input-group">
-                    <input type="name" name="name" class="form-control" placeholder="Nome do fornecedor:" required>
+                    <input type="name" name="fornecedor_nome" class="form-control" placeholder="Nome do fornecedor:" required>
                 </div>
             </div>
 
             <div class="mb-5 text-start">
                 <div class="input-group">
-                    <input type="text" name="endereco" class="form-control" placeholder="Endereço:" required>
+                    <input type="text" name="fornecedor_endereço" class="form-control" placeholder="Endereço:" required>
                 </div>
             </div>
 
@@ -26,21 +27,21 @@
             <div class="me-4" style="max-width: 600px; width: 100%;">
                 <div class="mb-5 text-start">
                     <div class="input-group">
-                        <input type="text" name="tipo_produto" class="form-control" placeholder="Tipo de Produto:"
+                        <input type="text" name="fornecedor_tipo_produtos" class="form-control" placeholder="Tipo de Produto:"
                             required>
                     </div>
                 </div>
                 <div class="mb-5 text-start">
                     <div class="input-group">
-                        <input type="text" name="pedido_minimo" class="form-control" placeholder="Pedido Mínimo:"
-                            required>
+                        <input type="text" name="fornecedor_pedido_minimo" class="form-control"
+                            placeholder="Pedido Mínimo:" required>
                     </div>
                 </div>
             </div>
             <div style="max-width: 575px; width: 100%;">
                 <div class="mb-5 text-start">
                     <div class="input-group">
-                        <input type="text" name="cnpj" class="form-control" placeholder="CNPJ:" required>
+                        <input type="text" name="fornecedor_cnpj" class="form-control" placeholder="CNPJ:" required>
                     </div>
                 </div>
                 <div class="text-center">
@@ -54,5 +55,8 @@
     </div>
 
 </form>
-</div>
-{%endblock%}
+
+
+
+
+{% endblock %}

@@ -1,15 +1,13 @@
-# importa a classe
 from core.crud_base import Crud_base
+from core.manipular import Manipular
+import base64
 
-# Cria a classe Sensor
 class Sensor(Crud_base):
-    # define a tabela, os campos e a PK, para o banco
     tabela = "sensor"
     pk = "sensor_id"
-    fields = ["sensor_nome", "sensor_descricao", "sensor_n_serie", "sensor_modelo", "sensor_voltagem", "sensor_tipo_conexao", "sensor_localizacao"]
+    fields = ["sensor_nome", "sensor_descricao", "sensor_n_serie", "sensor_modelo", "sensor_voltagem", "sensor_tipo_conexao", "sensor_localizacao", "sensor_imagem", "imagem_blob",  "imagem_tipo"]
 
-    # define os atributos
-    def __init__(self, sensor_nome, sensor_descricao, sensor_n_serie, sensor_modelo, sensor_voltagem, sensor_tipo_conexao, sensor_localizacao):
+    def __init__(self, sensor_nome, sensor_descricao, sensor_n_serie, sensor_modelo, sensor_voltagem, sensor_tipo_conexao, sensor_localizacao, sensor_imagem, imagem_tipo, imagem_blob):
         self.sensor_nome = sensor_nome
         self.sensor_descricao = sensor_descricao
         self.sensor_n_serie = sensor_n_serie
@@ -17,45 +15,87 @@ class Sensor(Crud_base):
         self.sensor_voltagem = sensor_voltagem
         self.sensor_tipo_conexao = sensor_tipo_conexao
         self.sensor_localizacao = sensor_localizacao
+        self.sensor_imagem = sensor_imagem
+        self.imagem_tipo = imagem_tipo
+        self.imagem_blob = imagem_blob
 
-    # Métoso para gravar dados do sensor
+    def validar_sensor(self):
+        erros = [
+            Manipular.validar_vazio(self.sensor_nome, "nome"),
+            Manipular.validar_vazio(self.sensor_descricao, "descrição"),
+            Manipular.validar_vazio(self.sensor_n_serie, "Numero de serie"),
+            Manipular.validar_vazio(self.sensor_modelo, "Modelo"),
+            Manipular.validar_vazio(self.sensor_voltagem, "voltagem"),
+            Manipular.validar_vazio(self.sensor_tipo_conexao, "Tipo conexão"),
+            Manipular.validar_vazio(self.sensor_localizacao, "Localização")
+        ]     
+            
+        return [ erro for erro in erros if erro]
+
     def gravar_sensor(self):
-        sensor = self.gravar() # chama o método gravar 
+        sensor = self.gravar()
 
-        if not sensor: # verifica se foi gravado
-            raise ValueError("Erro ao cadastrar sensor") # retorna o erro, se não foi cadastrado
+        if not sensor:
+            raise ValueError("Erro ao cadastrar sensor")
 
-        return "Sensor cadastrado com sucesso" # retorna sucesso
+        return "Sensor cadastrado com sucesso"
 
-    # Método para deletar dados de um sensor
     @classmethod
     def deletar_sensor(cls, id):
-        sensor = cls.buscar_por_id(id) # chama o método do Crud_base, para buscar o sensro
+        sensor = cls.buscar_por_id(id)
 
-        if not sensor: # verifica se foi encontrado
-            raise ValueError("Sensor não encontrado") # retorna se não foi encontrado
-        
-        cls.deletar(id) # chama a função deletar do Crud_base para deletar o sensor
+        if not sensor:
+            raise ValueError("Sensor não encontrado")
+        cls.deletar(id)
+        return "Sensor deletado com sucesso" 
 
-        return "Sensor deletado com sucesso" # retorna sucesso 
-
-    # Método para atualizar dados do sensor
     def atualizar_sensor(self, id):
-        sensor = self.buscar_por_id(id) # chama o método co Crud_base, para buscar sensor
+        sensor = self.buscar_por_id(id)
 
-        if not sensor: # verifica se foi encontrado
-            raise ValueError("Sensor não encontrado") # retorna erro, se não foi encontrado
+        if not sensor:
+            raise ValueError("Sensor não encontrado")
 
-        self.atualizar(id) # chama a função de atualizar do Crud_base
-        return "Sensor atualizado com sucesso!" # retorna sucesso
+        self.atualizar(id)
+        return "Sensor atualizado com sucesso!"
 
-    # Método para buscar sensor
     @classmethod
-    def buscar_sensor(cls, id):
-        sensor = cls.buscar_por_id(id) # chama o método do Crud_base para buscar sensor
+    def buscar_sensor_id(cls, id):
+        sensor = cls.buscar_por_id(id)
 
-        if not sensor: # verifica se foi encontrado
-            raise ValueError("Sensor não encontrado") # retorna erro, se não foi encontrado
+        if not sensor:
+            raise ValueError("Sensor não encontrado")
+            
+        sid = sensor["sensor_id"]      
+        del sensor["sensor_id"]        
+        obj = Sensor(**sensor)         
+        obj.sensor_id = sid
+        if obj.imagem_blob:
+            obj.imagem_base64 = base64.b64encode(obj.imagem_blob).decode("utf-8")
+        else:
+            obj.imagem_base64 = ""
+        return obj
+    
+    @classmethod
+    def buscar_sensores(cls, order_by=pk):
+        sensores = cls.buscar_tudo(order_by)
 
-        sensor.pop("sensor_id", None) # tira o id do sensor para retornar para o usuario
-        return Sensor(**sensor) # retorna os dados 
+        if not sensores:
+            raise ValueError("Sensor não encontrato")
+        
+        for sensor in sensores:
+            sensor["imagem_base64"] = None
+            if sensor.get("imagem_blob"):
+                sensor["imagem_base64"] = base64.b64encode(sensor["imagem_blob"]).decode("utf-8")
+        
+        return sensores
+    
+    @classmethod
+    def contar_sensores(cls, order_by="sensor_id"):
+        sensor = cls.buscar_tudo(order_by)
+        if not sensor:
+            raise ValueError("Sensor não encontrato")
+        
+        sensores = 0
+        for i in sensor:
+            sensores = sensores + 1
+        return sensores

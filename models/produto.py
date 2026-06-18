@@ -1,105 +1,195 @@
-# Importa a classes
 from core.crud_base import Crud_base
 from core.manipular import Manipular
 from core.conectar import Database
+import base64
 
-# Cria a classe Produto
 class Produto(Crud_base):
-    # define a tabela, os campos e a PK, para o banco
     tabela = "produto"
     pk = "produto_id"
-    fields = ["produto_nome", "produto_descricao", "produto_categoria", "usuario_usuario_id"]
+    fields = ["produto_nome", "produto_descricao", "produto_categoria", "usuario_usuario_id", "produto_imagem", "imagem_tipo", "imagem_blob"]
+    fields_estoque = ["estoque_quantidade", "estoque_observacao", "produto_produto_id", "produto_usuario_usuario_id"]
 
-    # define os atributos
-    def __init__(self, produto_nome, produto_descricao, produto_categoria, usuario_usuario_id):
+    def __init__(self, produto_nome, produto_descricao, produto_categoria, usuario_usuario_id=None, produto_imagem=None, imagem_tipo=None, imagem_blob=None, **kwargs):
         self.produto_nome = produto_nome
         self.produto_descricao = produto_descricao
         self.produto_categoria = produto_categoria
         self.usuario_usuario_id = usuario_usuario_id
+        self.produto_imagem = produto_imagem
+        self.imagem_tipo = imagem_tipo
+        self.imagem_blob = imagem_blob
 
-    # valida os dados 
-    def validar(self):
+    def validar_produto(self):
         erros = [
-            Manipular.validar_vazio(self.produto_nome, "nome"), # valida se o campos esta vazio
-            Manipular.validar_caracter(self.produto_nome, "nome"), # valida se tem caracteres especiais no nome
-            Manipular.validar_vazio(self.produto_categoria, "categoria") # valida se o campos esta vazio
+            Manipular.validar_vazio(self.produto_nome, "nome"),
+            Manipular.validar_vazio(self.produto_categoria, "categoria")
         ]
 
-        return [ erro for erro in erros if erro] # retorna erro, se houver erros
+        return [ erro for erro in erros if erro]
     
-    # Método de gravar produto
-    def gravar_produto(self):
-        produto = self.gravar() # chama o método do Crud_base
+    def gravar_produto(self, estoque_quantidade=0, estoque_observacao=None):
+        produto_id = self.gravar()
 
-        if not produto: # verifica se foi gravado
-            raise ValueError("Erro ao cadastrar produto.") # retorna se teve erro
+        if not produto_id:
+            raise ValueError("Erro ao cadastrar produto.")
         
-        return "Cadastrado" # retorno sucesso
+        conexao = Database.connect()
+        cursor = conexao.cursor()
+
+        try:
+            sql = """
+                INSERT INTO estoque 
+                (estoque_quantidade, estoque_observacao, produto_produto_id, produto_usuario_usuario_id) 
+                VALUES (%s, %s, %s, %s)
+            """
+
+            valores = (
+                estoque_quantidade, 
+                estoque_observacao, 
+                produto_id,             
+                self.usuario_usuario_id  
+            )
+            
+            cursor.execute(sql, valores)
+            conexao.commit()
+            
+            return "Produto e estoque cadastrados com sucesso!"
+        except Exception as e:
+            conexao.rollback() 
+            raise ValueError(f"Erro ao cadastrar o estoque do produto: {e}")
+        finally:
+            cursor.close()
+            conexao.close()
     
-    # Método de verificação de relação de dados com otra tabela
     @classmethod
     def relacao_entre_tabelas(cls, id):
-        
+        '''
         conexao = Database.connect()
         cursor = conexao.cursor()
         try:
             queries = [
-                "SELECT COUNT(*) FROM movimentacao WHERE produto_id = %s", # verifica relação na tabela movimentação
+                "SELECT COUNT(*) FROM movimentacao WHERE produto_id = %s",
+                "SELECT COUNT(*) FROM pedido_movimentacao WHERE produto_id = %s"
             ]
             total = 0
             for sql in queries:
                 cursor.execute(sql, (id,))
-                total += cursor.fetchone()[0] 
+                total += cursor.fetchone()[0]
             return total > 0
         finally:
             cursor.close()
-            conexao.close()
+            conexao.close()'''
         return False
 
-    # Método de deletar dados de produto
     @classmethod
     def deletar_produto(cls, id):
-        produto = cls.buscar_por_id(id) # chama o método de buscar por id do Crud_base
-
-        if not produto: # verifica se foi encontrado
-            raise ValueError("Produto não encontrado.") # retorna se não foi encontrado
-        if cls.relacao_entre_tabelas(id): # verifica se tem relação com outra tabela
-            raise ValueError("Não é possível excluir o produto porque ele possui pedidos ou movimentações vinculadas.") # retorna se tiver relações
+        produto = cls.buscar_por_id(id)
+        if not produto:
+            raise ValueError("Produto não encontrado")
         
-        cls.deletar(id) # chama o método para deletar produto do Crud_base
+        conexao = Database.connect()
+        cursor = conexao.cursor()
+        try:
+            # 1. Apagar os dependentes (filhos) na tabela item_pedido_saida
+            query_deletar_saidas = """
+                DELETE FROM item_pedido_saida 
+                WHERE estoque_estoque_id IN (
+                    SELECT estoque_id FROM estoque WHERE produto_produto_id = %s
+                )
+            """
+            cursor.execute(query_deletar_saidas, (id,))
 
-        return "Produto deletado com sucesso!" # retorna sucesso
+            # 2. Apagar os dependentes (filhos) na tabela item_pedido_entrada
+            query_deletar_entradas = """
+                DELETE FROM item_pedido_entrada 
+                WHERE estoque_estoque_id IN (
+                    SELECT estoque_id FROM estoque WHERE produto_produto_id = %s
+                )
+            """
+            cursor.execute(query_deletar_entradas, (id,))
+            
+            # 3. Agora sim, com os filhos apagados, deletamos o registo "Pai" na tabela estoque.
+            query_deletar_pai = "DELETE FROM estoque WHERE produto_produto_id = %s"
+            cursor.execute(query_deletar_pai, (id,))
+            
+            # Confirma as exclusões na base de dados
+            conexao.commit()
+            
+        except Exception as e:
+            # Se der qualquer erro, desfaz tudo
+            conexao.rollback()
+            raise e 
+            
+        finally:
+            cursor.close()
+            conexao.close()
+        
+        cls.deletar(id)
+        return "Produto deletado com sucesso"
     
-    # Método atualizar dados de produto
     def atualizar_produto(self, id):
-        produto = self.buscar_por_id(id) # chama o método do Crud_base, para o produto
+        produto = self.buscar_por_id(id)
+        if not produto:
+            raise ValueError("Produto não encontrado!")
+        if self.relacao_entre_tabelas(id):
+            raise ValueError("Não é possível atualizar o produto porque ele possui pedidos ou movimentações vinculadas.")
+        self.atualizar(id)
 
-        if not produto: # verifica se foi encontrado
-            raise ValueError("Produto não encontrado!") # retorna se não foi encontrado
-        if self.relacao_entre_tabelas(id): # verifica se tem relação com outras tabelas
-            raise ValueError("Não é possível atualizar o produto porque ele possui pedidos ou movimentações vinculadas.") # retorna se tiver relação com outras tabelas
+        return "Produto atualizado com sucesso!"
         
-        self.atualizar(id) # chama o método atualizar do Crud_base, para atualizar os dados
-
-        return "Produto atualizado com sucesso!" # retorna sucesso
-
-    # Método para buscar produto port id
     @classmethod
     def buscar_produto_id(cls, id):
-        produto = cls.buscar_por_id(id) # chama o método do Crud_base para buscar
+        produto = cls.buscar_por_id(id)
 
-        if not produto: # verifica se foi encontrado
-            raise ValueError("Produto não encontrado") # retorna se não foi encontrado
+        if not produto:
+            raise ValueError("Produto não encontrado")
+        
+        return produto
 
-        return Produto(**produto) # retorna os dados encontrados
-
-    # Método para buscar todos os produtso
     @classmethod
     def buscar_todo_produto(cls, order_by="produto_nome"):
-        produto = cls.buscar_tudo(order_by) # chama o método do Crud_base para buscar os produtos
+        produtos = cls.buscar_tudo(order_by)  
 
-        if not produto: # verifica se foi encontrado
-            raise ValueError("Produtos não encontrado") # retorna erro, se não foi encontrado
+        if not produtos:
+            raise ValueError("Produtos não encontrados")
 
-        return f"Produtos encontrados " # retorna sucesso
-        
+        for produto in produtos:
+            produto["imagem_base64"] = None
+            if produto.get("imagem_blob"):
+                produto["imagem_base64"] = base64.b64encode(produto["imagem_blob"]).decode("utf-8")
+
+        return produtos
+
+    @classmethod
+    def filtro_categoria(cls, categoria):
+        if not categoria:
+            return []
+
+        conexao = Database.connect()
+        cursor = conexao.cursor(dictionary=True)
+
+        try:
+           
+            sql = """
+                SELECT p.produto_categoria, SUM(e.estoque_quantidade) AS estoque_quantidade 
+            FROM produto p
+            LEFT JOIN estoque e ON e.produto_produto_id = p.produto_id
+            WHERE p.produto_categoria LIKE %s
+            GROUP BY p.produto_categoria;
+            """
+            
+            cursor.execute(sql, (f"%{categoria}%",))
+            resultados = cursor.fetchall()
+
+           
+            if resultados:
+                return resultados
+            else:
+                return []  
+                
+        except Exception as e:
+            print(f"Erro na busca por categoria: {e}")
+            return [] 
+            
+        finally:
+            cursor.close()
+            conexao.close()

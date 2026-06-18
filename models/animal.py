@@ -7,6 +7,7 @@ class Animal(Crud_base):
 
     # Define a tabela e os campos do banco
     tabela = "animal"
+    pk = "animal_id"
     fields = ["animal_especie","animal_sexo", "animal_raca", "animal_identificacao", "animal_idade"]
 
     # Define os atributos 
@@ -18,7 +19,7 @@ class Animal(Crud_base):
         self.animal_idade = animal_idade
 
     # Faz a validação dos dados para a gravação com o banco
-    def validar(self):
+    def validar_animal(self):
         erros = [
             Manipular.validar_vazio(self.animal_especie, "especie"), # verifica se os dados estão vazio
             Manipular.validar_vazio(self.animal_sexo, "sexo"), # verifica se os dados estão vazio
@@ -66,3 +67,13 @@ class Animal(Crud_base):
             raise ValueError("Animal não encontrado.") # retorna se tiver erro
 
         return Animal(**animal)# retorna os dados encontrado
+    
+
+    @classmethod
+    def buscar_animal(cls, order_by=pk):
+        animal = cls.buscar_tudo(order_by) # chama o método para de buscar por id do Crud_base
+
+        if not animal: # verifica se foi encontrado
+            raise ValueError("Animal não encontrado.") # retorna se tiver erro
+
+        return animal# retorna os dados encontrado
